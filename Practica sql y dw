@@ -1,0 +1,112 @@
+
+                                               PRACTICA SQL Y DW
+
+
+
+Los diagramas de relaciones entre entidades en Keepcoding se centran en modelar bases de datos que incluyen entidades como estudiantes, programas de capacitación, módulos y profesores. Estas entidades representan los elementos centrales de una institución educativa.
+Cada entidad y sus relaciones se describen a continuación:
+
+
+Estudiante: esta entidad representa a los estudiantes registrados en Keepcoding.
+Los atributos típicos pueden incluir identificación de estudiante, nombre, dirección de correo electrónico y otros datos personales.
+Bootcamp: Representa los diversos programas o cursos de capacitación que ofrece Keepcoding.
+Los atributos pueden incluir ID de bootcamp, nombre de bootcamp, descripción y duración.
+Módulos: Cada boot camp consta de una serie de módulos o módulos de aprendizaje.
+Los atributos de esta entidad pueden ser ID de unidad, nombre, descripción y profesor asociado.
+Docente: Esta entidad representa a los docentes o tutores que imparten los módulos.
+Los atributos pueden incluir identificación del maestro, nombre, experiencia e información de contacto.
+Sobre las relaciones:
+
+
+Estudiantes y bootcamps: existe una relación de "suscripción" entre los estudiantes y los bootcamps, donde un estudiante puede inscribirse en varios bootcamps y un bootcamp puede tener varios estudiantes inscritos.
+
+
+Bootcamps y Módulos: Cada bootcamp consta de varios módulos.
+Esta es una relación "contiene" donde el bootcamp consta de varios módulos.
+
+
+Módulos y Tutores: Los módulos son impartidos por profesores.
+Cada módulo está asociado a un tutor, aunque los tutores pueden impartir varios módulos.
+
+2 Creacion de bases de datos
+
+import pandas as pd
+
+# Reemplazar 'ruta_del_archivo.csv' con la ruta real del archivo CSV
+df = pd.read_csv('ruta_del_archivo.csv')
+
+# Mostrar las primeras filas del DataFrame
+print('Primeras filas del DataFrame:')
+print(df.head())
+
+# Obtener información sobre los tipos de datos y los valores nulos
+print('\nInformación del DataFrame:')
+print(df.info())
+
+3 tabla Ivr_detail
+
+CREATE TABLE ivr_detail AS
+SELECT
+    c.ivr_id AS calls_ivr_id,
+    c.phone_number AS calls_phone_number,
+    c.ivr_result AS calls_ivr_result,
+    c.vdn_label AS calls_vdn_label,
+    c.start_date AS calls_start_date,
+    TO_DATE(c.start_date, 'YYYY-MM-DD')::INTEGER AS calls_start_date_id,
+    c.end_date AS calls_end_date,
+    TO_DATE(c.end_date, 'YYYY-MM-DD')::INTEGER AS calls_end_date_id,
+    c.total_duration AS calls_total_duration,
+    c.customer_segment AS calls_customer_segment,
+    c.ivr_language AS calls_ivr_language,
+    c.steps_module AS calls_steps_module,
+    c.module_aggregation AS calls_module_aggregation,
+    m.module_sequece,
+    m.module_name,
+    m.module_duration,
+    m.module_result,
+    s.step_sequence,
+    s.step_name,
+    s.step_result,
+    s.step_description_error,
+    s.document_type,
+    s.document_identification,
+    s.customer_phone,
+    s.billing_account_id
+FROM ivr_calls c
+JOIN ivr_modules m ON c.ivr_id = m.ivr_id
+JOIN ivr_steps s ON m.ivr_id = s.ivr_id AND m.module_sequece = s.module_sequece;
+
+4 Tabla ivr_summary
+
+CREATE TABLE ivr_summary AS
+SELECT
+    d.calls_ivr_id AS ivr_id,
+    d.calls_phone_number AS phone_number,
+    d.calls_ivr_result AS ivr_result,
+    -- Lógica para vdn_aggregation
+    CASE 
+        WHEN d.calls_vdn_label LIKE 'ATC%' THEN 'FRONT'
+        WHEN d.calls_vdn_label LIKE 'TECH%' THEN 'TECH'
+        WHEN d.calls_vdn_label = 'ABSORPTION' THEN 'ABSORPTION'
+        ELSE 'RESTO'
+    END AS vdn_aggregation,
+    d.calls_start_date AS start_date,
+    d.calls_end_date AS end_date,
+    d.calls_total_duration AS total_duration,
+    d.calls_customer_segment AS customer_segment,
+    d.calls_ivr_language AS ivr_language,
+    d.calls_steps_module AS steps_module,
+    d.calls_module_aggregation AS module_aggregation,
+    -- Campos adicionales y lógica para flags
+    -- ...
+FROM ivr_detail d
+GROUP BY d.calls_ivr_id;
+
+5 funcion de limpieza enteros
+
+CREATE OR REPLACE FUNCTION clean_integer(input_value INTEGER)
+RETURNS INTEGER AS $$
+BEGIN
+    RETURN COALESCE(input_value, -999999);
+END;
+$$ LANGUAGE plpgsql;
